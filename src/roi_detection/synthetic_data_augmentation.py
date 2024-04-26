@@ -52,7 +52,7 @@ def get_random_location(bg_width, bg_height, card_width, card_height):
     return x, y
 
 # Path to the folder containing original images with cards categorized by color
-original_images_folder =  os.path.abspath('../../data/original_images')
+original_images_folder =  os.path.abspath('../../data/preprocessed_images')
 
 # Path to the folder containing background images
 background_images_folder =  os.path.abspath('../../data/background_images')
@@ -61,17 +61,20 @@ output_image_path =  os.path.abspath('../../data/background_augmented_images')
 
 # CSV file to save the ROI
 csv_filename = 'roi_coordinates.csv'
-# with open(csv_filename, mode ='w', newline='') as csvfile:
-#     writer = csv.writer(csvfile)
-#     writer.writerow(['blended_image', 'ROI X', 'ROI Y', 'ROI_Z', 'ROI_WIdth', 'ROI_Height'])
+with open(csv_filename, mode ='w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['blended_image_new', 'ROI X', 'ROI Y', 'ROI_Z', 'ROI_WIdth', 'ROI_Height'])
 
 # Iterate through each original image
 for color_folder in os.listdir(original_images_folder):
     color_folder_path = os.path.join(original_images_folder, color_folder)
+    print(color_folder)
+    print(color_folder_path)
+    print(os.path.isdir(color_folder_path))
     if os.path.isdir(color_folder_path):
         # Iterate through each original image within the color folder
         for original_image_name in os.listdir(color_folder_path):
-            if original_image_name.endswith('.png') or original_image_name.endswith('.jpg'):
+            if original_image_name.endswith('.PNG') or original_image_name.endswith('.jpg'):
                 original_image_path = os.path.join(color_folder_path, original_image_name)
                 
                 # Load the original image which is croped after preprocessing
@@ -79,7 +82,7 @@ for color_folder in os.listdir(original_images_folder):
                 
                 # Iterate through each background image
                 for background_image_name in os.listdir(background_images_folder):
-                    if background_image_name.endswith('.png') or background_image_name.endswith('.jpg'):
+                    if background_image_name.endswith('.png') or background_image_name.endswith('.jpeg'):
                         background_image_path = os.path.join(background_images_folder, background_image_name)
                         
                         # Load the background image
@@ -116,7 +119,7 @@ for color_folder in os.listdir(original_images_folder):
                             # Save ROI coordinates to CSV file
                             with open(csv_filename, mode='a', newline='') as csv_file:
                                 writer = csv.writer(csv_file)
-                                writer.writerow([output_image_name, roi_coordinate[0], roi_coordinate[1], roi_coordinate[2], roi_coordinate[3]])
+                                writer.writerow([color_folder, roi_coordinate[0], roi_coordinate[1], roi_coordinate[2], roi_coordinate[3]])
                             
                             print("Comleted")
                             
