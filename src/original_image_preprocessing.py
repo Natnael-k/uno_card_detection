@@ -129,7 +129,7 @@ class ImagePreprocessor:
             ver = hor
         return ver
 
-    # Define folder containing images categorized by color label
+    # Define folder containing images categorized by color label itertate through all the image
     def process_all_images(self):
         # Iterate over each color folder
         for color_folder in os.listdir(self.original_images_path):
