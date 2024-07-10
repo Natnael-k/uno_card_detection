@@ -12,79 +12,121 @@ class ImagePreprocessor:
         
         self.original_images_path = original_image_path
         self.preprocessed_images_path = preprocessed_image_path
-        
-    
-        
+            
+    #call back function for trackbar 
     def empty(self, a):
         pass
 
     # Function to process each image
     def preprocess_image(self, image):
         
-        #create trackbars
+        # #create trackbars for treshold tuening
         # cv2.namedWindow("Parameters")
         # cv2.resizeWindow("Parameters", 640, 240)
         # cv2.createTrackbar("Threshold1", "Parameters", 87, 255, self.empty)
         # cv2.createTrackbar("Threshold2", "Parameters", 97, 255, self.empty)
         # cv2.createTrackbar("Area", "Parameters", 0, 1500, self.empty)
+        
+        #create trackbars for HSV Segmentation tuening
+        cv2.namedWindow("HSV")
+        cv2.resizeWindow("HSV", 640, 240)
+        cv2.createTrackbar("HUE Min", "HSV", 0, 179, self.empty)
+        cv2.createTrackbar("HUE Max", "HSV", 179, 179, self.empty)
+        cv2.createTrackbar("SAT Min", "HSV", 0, 255, self.empty)
+        cv2.createTrackbar("SAT Max", "HSV", 255, 255, self.empty)
+        cv2.createTrackbar("VALUE Min", "HSV", 0, 255, self.empty)
+        cv2.createTrackbar("VALUE Max", "HSV", 255, 255, self.empty)
+         
+        cap = cv2.VideoCapture(2)
+        while True:
+            ret, frame = cap.read()
+            cv2.resize(frame, (360, 240))
+            if not ret:
+                break
+            
+            imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
       
-        #Read the image
-        img = image
+            # #Read the image from external function
+            # img = image
+            
+            # #copy image to display contour
+            # imgContour = img.copy()
         
-        #copy image to display contour
-        imgContour = img.copy()
-    
-        # blur the image 
-        imgBlur = cv2.GaussianBlur(img, (7,7), 3)
+            # # blur the image 
+            # imgBlur = cv2.GaussianBlur(img, (7,7), 3)
+            
+            # # Convert to grayscale
+            # imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+            
+            # #save tresholds 
+            # threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
+            # threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
+            
+            #save Trackbar position
+            h_min = cv2.getTrackbarPos("HUE Min", "HSV")
+            h_max = cv2.getTrackbarPos("HUE Max", "HSV")
+            s_min = cv2.getTrackbarPos("SAT Min", "HSV")
+            s_max = cv2.getTrackbarPos("SAT Max", "HSV")
+            v_min = cv2.getTrackbarPos("VALUE Min", "HSV")
+            v_max = cv2.getTrackbarPos("VALUE Max", "HSV")
+            
+            lower = np.array([h_min, s_min, v_min])
+            higher = np.array([h_max, s_max, v_max])
+            mask = cv2.inRange(imgHSV, lower, higher)
+            result = cv2.bitwise_and(frame, frame, mask=mask)
+            
+            cv2.imshow("original", frame)
+            cv2.imshow("mask", mask)
+            cv2.imshow("result", result)
+            
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
         
-        # Convert to grayscale
-        imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+            # #Canny image Detector
+            # imgCanny = cv2.Canny(imgGray, 97, 87)
+            
+            # #Filter noise by dialtion
+            # kernel = np.ones((5,5))
+            # imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
         
-        #save tresholds 
-        # threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
-        # threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
+            #################---> Use this segment of the code for cropping from black or white background photo <----##########
+            # # Find contours
+            # contours, _ = cv2.findContours(imgDil, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            
+            # #Find the largest contour
+            # if contours:
+            #     largest_contour = max(contours, key=cv2.contourArea)
+            
+            #     area = cv2.contourArea(largest_contour)
+            #     cv2.imshow("card__detector", image)
+            #     cv2.drawContours(imgContour, largest_contour, -1, (255, 0, 255), 7)
+            #     peri = cv2.arcLength(largest_contour, True)
+            #     approx = cv2.approxPolyDP(largest_contour, 0.02 * peri, True)
+            #     print(len(approx))
+            #     x_, y_, w_, h_ = cv2.boundingRect(approx)
+            #     cv2.rectangle(imgContour, (x_,y_), (x_ + w_, y_ + h_), (0, 240, 0), 5)
+            #     cv2.putText(imgContour, "Points:" +str(len(approx)), (x_ + w_ + 20, y_ + 20), cv2.FONT_HERSHEY_COMPLEX, .7, (0,255,0), 2)
+            #     cv2.putText(imgContour, "Area:" +str(area), (x_ + w_ + 20, y_ + 45), cv2.FONT_HERSHEY_COMPLEX, .7, (0,255,0), 2)
+            
+            #################---> Use this segment of the code for stcking images into grid for analysis <----##########
+            #Stack images for visualising
+            #imgStack = self.stackImages(0.4, ([img, imgBlur, imgCanny],[imgDil, imgContour, imgContour]))
+            
+            #Bounding rectangle around the largest contour
+            #x, y, w, h = cv2.boundingRect(largest_contour)
+            
+            #Ensure aspect ratio is within a certain range
+            #aspect_ratio = w_ / float(h_)
+            #if aspect_ratio < 0.5 or aspect_ratio > 1.8:  # Adjust range as needed
+                #return None  # Skip processing if aspect ratio is not within desired range
+            
+            #card = img[y_:y_+h_, x_:x_+w_]
+                #return card
         
-        #Canny image Detector
-        imgCanny = cv2.Canny(imgGray, 97, 87)
+        #else:
+            #return None
         
-        #Filter noise by dialtion
-        kernel = np.ones((5,5))
-        imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
-        
-        
-        # Find contours
-        contours, _ = cv2.findContours(imgDil, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        
-        #Find the largest contour
-        largest_contour = max(contours, key=cv2.contourArea)
-        
-        area = cv2.contourArea(largest_contour)
-        
-        cv2.drawContours(imgContour, largest_contour, -1, (255, 0, 255), 7)
-        peri = cv2.arcLength(largest_contour, True)
-        approx = cv2.approxPolyDP(largest_contour, 0.02 * peri, True)
-        print(len(approx))
-        x_, y_, w_, h_ = cv2.boundingRect(approx)
-        cv2.rectangle(imgContour, (x_,y_), (x_ + w_, y_ + h_), (0, 240, 0), 5)
-        cv2.putText(imgContour, "Points:" +str(len(approx)), (x_ + w_ + 20, y_ + 20), cv2.FONT_HERSHEY_COMPLEX, .7, (0,255,0), 2)
-        cv2.putText(imgContour, "Area:" +str(area), (x_ + w_ + 20, y_ + 45), cv2.FONT_HERSHEY_COMPLEX, .7, (0,255,0), 2)
-    
-        #Stack images for visualising
-        #imgStack = self.stackImages(0.4, ([img, imgBlur, imgCanny],[imgDil, imgContour, imgContour]))
-        
-        # Bounding rectangle around the largest contour
-        #x, y, w, h = cv2.boundingRect(largest_contour)
-        
-        # Ensure aspect ratio is within a certain range
-        aspect_ratio = w_ / float(h_)
-        if aspect_ratio < 0.5 or aspect_ratio > 1.8:  # Adjust range as needed
-            return None  # Skip processing if aspect ratio is not within desired range
-        
-        card = img[y_:y_+h_, x_:x_+w_]
-
-        return card
-
-    # Function to augment brightness and contrast
+    #Function to augment brightness and contrast
     def augment_brightness_contrast(self, image, alpha_range=(0.8, 1.2), beta_range=(-20, 20)):
         # Generate random alpha and beta values within the specified ranges
         alpha = random.uniform(*alpha_range)
@@ -92,7 +134,6 @@ class ImagePreprocessor:
         
         augmented_image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
         return augmented_image
-
 
     #src
     # https://github.com/murtazahassan/OpenCV-Python-Tutorials-and-Projects/blob/master/Basics/Joining_Multiple_Images_To_Display.py
@@ -163,6 +204,9 @@ class ImagePreprocessor:
                     print(f"Processed and saved: {augmented_image_path}")
 
 def main():
+    
+    ########--------->Use this for testin and tuining parameters----------######
+    
         # Define paths for original and preprocessed images
         original_images_path = os.path.abspath('../data/original_images')
         preprocessed_images_path = os.path.abspath('../data/preprocessed_images')
@@ -172,10 +216,10 @@ def main():
         image_preprocessor = ImagePreprocessor(original_images_path, preprocessed_images_path)
 
         # Process all images
-        image_preprocessor.process_all_images()
+        #image_preprocessor.process_all_images()
         
         # Preprocess image
-        #image_preprocessor.preprocess_image(test_images_path) 
+        image_preprocessor.preprocess_image(test_images_path) 
         
 
 if __name__ == "__main__":

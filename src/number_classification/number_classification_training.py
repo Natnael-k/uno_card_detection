@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import os
 import glob
+import pickle
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -18,7 +19,7 @@ from sklearn.neural_network import MLPClassifier
 
 class FeatureDetection:
     
-    """Feature extraction, and training """
+    """ Feature extraction, and training """
     
     def __init__(self):
         
@@ -36,33 +37,66 @@ class FeatureDetection:
         self.feature_list = [self.features_dict[ft] for ft in self.use_features]
 
 
-    def get_contours(self, img, HSV_mask_for_feature_recognition):
+    def get_contours(self, img):
         
-        cv2.imshow("img", img)
-        cv2.waitKey(0) 
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        ret, img_th = cv2.threshold(img_gray, 0, 255, cv2.THRESH_OTSU)
-        imHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        HSVmin, HSVmax = HSV_mask_for_feature_recognition
-        cv2.imshow("hsv", imHSV)
-        cv2.waitKey(0) 
-        print("hsv_mask", HSV_mask_for_feature_recognition)
-        img_mask = cv2.inRange(imHSV, HSVmin, HSVmax)
+        #--> Use this for getting contours from the image
         
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10, 10))
-        img_th = cv2.morphologyEx(img_mask, cv2.MORPH_CLOSE, kernel)  # erode + dilate
-        cv2.imshow("mak", img_mask)
-        cv2.waitKey(0)
+        # blur the image  
+        imgBlur = cv2.GaussianBlur(img, (7,7), 3)
         
-        contour_list, hierarchy = cv2.findContours(img_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        n_obj = len(contour_list)
-        ch = 0
-        while ch < n_obj and len(contour_list[ch]) < 10:
-            ch += 1
-            print(contour_list[ch])
-        contour = contour_list[ch]
+        # Convert to grayscale
+        imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
         
-        return contour
+        #Canny image Detector
+        imgCanny = cv2.Canny(imgGray, 97, 87)
+        
+        #Filter noise by dialtion
+        kernel = np.ones((5,5))
+        imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
+        
+        contour_list, _ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        if len(contour_list) > 0:
+            n_obj =  len(contour_list)
+            ch = 0
+            while ch < n_obj and len(contour_list[ch]) < 10:
+                ch += 1
+                
+            contour = contour_list[ch]
+            return contour
+        else:
+            return None
+    
+    
+    def stackImages(self,scale,imgArray):
+        rows = len(imgArray)
+        cols = len(imgArray[0])
+        rowsAvailable = isinstance(imgArray[0], list)
+        width = imgArray[0][0].shape[1]
+        height = imgArray[0][0].shape[0]
+        if rowsAvailable:
+            for x in range ( 0, rows):
+                for y in range(0, cols):
+                    if imgArray[x][y].shape[:2] == imgArray[0][0].shape [:2]:
+                        imgArray[x][y] = cv2.resize(imgArray[x][y], (0, 0), None, scale, scale)
+                    else:
+                        imgArray[x][y] = cv2.resize(imgArray[x][y], (imgArray[0][0].shape[1], imgArray[0][0].shape[0]), None, scale, scale)
+                    if len(imgArray[x][y].shape) == 2: imgArray[x][y]= cv2.cvtColor( imgArray[x][y], cv2.COLOR_GRAY2BGR)
+            imageBlank = np.zeros((height, width, 3), np.uint8)
+            hor = [imageBlank]*rows
+            hor_con = [imageBlank]*rows
+            for x in range(0, rows):
+                hor[x] = np.hstack(imgArray[x])
+            ver = np.vstack(hor)
+        else:
+            for x in range(0, rows):
+                if imgArray[x].shape[:2] == imgArray[0].shape[:2]:
+                    imgArray[x] = cv2.resize(imgArray[x], (0, 0), None, scale, scale)
+                else:
+                    imgArray[x] = cv2.resize(imgArray[x], (imgArray[0].shape[1], imgArray[0].shape[0]), None,scale, scale)
+                if len(imgArray[x].shape) == 2: imgArray[x] = cv2.cvtColor(imgArray[x], cv2.COLOR_GRAY2BGR)
+            hor= np.hstack(imgArray)
+            ver = hor
+        return ver
 
     def extract_training_features(self, contours, features):
         feature_values_list = []
@@ -72,6 +106,7 @@ class FeatureDetection:
         return feature_values_list
 
     def find_features(self, input_contour, features):
+        
         curvature_chain = []
         cont_ar = np.asarray(input_contour)
 
@@ -116,58 +151,37 @@ class FeatureDetection:
         concavity_ratio = concavity / float(i + 1)
 
         feature_values = [eval(ft) for ft in features]
+        
         return feature_values
     
-    def create_dataset(self,HSVs_for_mask_classifier, n = 25):
+    def create_dataset(self):
         
         selected_dataset = []
         feature_space = []
         labels = []
-        # base_dir = os.path.abspath('../../data/preprocessed_images')
-        # Iterate over color folders
+        
+        #Iterate over color folders
         for folder in os.listdir(os.path.abspath("../data/preprocessed_images")):
-            color_path = os.path.join(os.path.abspath("../../data/preprocessed_images"), folder)
+            color_path = os.path.join(os.path.abspath("../data/preprocessed_images"), folder)
             if os.path.isdir(color_path):
-                # Initialize a dictionary to keep track of selected images for each card type
-                selected_images = {card_type: False for card_type in self.card_numbers }
-                
-                # Iterate over card types
-                for card_type in self.card_numbers :
-                    # Filter images based on card type and preprocessing status
-                    images = glob.glob(os.path.join(color_path, f'*_{card_type}_preprocessed.PNG'))
-                    if images:
-                        # Randomly select 1 image for the current card type
-                        selected_image = random.choice(images)
-                        selected_dataset.append([selected_image, folder, card_type])
-                        selected_images[card_type] = True
-        
-                # Check if all card types have been selected
-                if all(selected_images.values()):
-                    # If all card types are present, break the loop
-                    break
-
-        # Ensure at least 25 images are selected
-        while len(selected_dataset) < n:
-            # Randomly select an image from the selected color folder
-            random_color_folder = random.choice(os.listdir(os.path.abspath("../data/preprocessed_images")))
-            random_color_path = os.path.join(os.path.abspath("../data/preprocessed_images"), random_color_folder)
-            random_image = random.choice(glob.glob(os.path.join(random_color_path, '*.PNG')))
-            selected_dataset.append([random_image, random_color_folder, random_image[-19:-17]])
-        
-       
-        for dataset in selected_dataset:
-            HSV_Mask = HSVs_for_mask_classifier[dataset[1]]
-            image = cv2.imread(dataset[0])
-            current_contour = self.get_contours(image, HSV_Mask[0])
-            new_feature_values = self.find_features(current_contour,self.feature_list)  # chain = contours(i)
-            feature_space.append(new_feature_values)
-            labels.append(dataset[2])
+                 for image_name in os.listdir(color_path):
+                    image_path = os.path.join(color_path, image_name)
+                    image = cv2.imread(image_path)
+                    current_contour = self.get_contours(image)
+                    new_feature_values = self.find_features(current_contour,self.feature_list)
+                    print(image_name)# chain = contours(i)
+                    feature_space.append(new_feature_values)
+                    image_lable = image_name[-19:-17]
+                    labels.append(image_lable)
             
-            
-                
+            print("feature_space",feature_space)
+            print('lables', labels)
+                 
         return feature_space, labels
     
     def train_model(self, X_train, y_train):
+        
+        self.classifier_model_path = os.path.abspath('../number_classification/gaussian_classifier_model.pkl')
         
         self.scaler = StandardScaler()
         self.scaler.fit(X_train)
@@ -182,29 +196,25 @@ class FeatureDetection:
         self.classifier = GaussianNB()  # Using Gaussian Naive Bayes classifier
         self.classifier.fit(X_train_pca, y_train)
         
-    def predict_shape(self, image, color):
         
-        current_contour = self.get_contours(image, color)
+        #saving the trainned  model
+        with open(self.classifier_model_path, 'wb') as file:
+            pickle.dump({
+                'scaler': self.scaler,
+                'pca': self.pca,
+                'classifier': self.classifier
+            }, file)
+        
+    def predict_shape(self, image):
+        self.classifier = GaussianNB()
+        current_contour = self.get_contours(image)
         new_feature_values = self.find_features(current_contour, self.feature_list)
         temp = np.asarray(new_feature_values).reshape(1, -1)
-        X_test = self.scaler.transform(temp)
-        new_F = self.pca.transform(X_test)
+        X_test = StandardScaler.transform(temp)
+        new_F = PCA.transform(X_test)
         prob = self.classifier.predict_proba(new_F)
         predicted_shape = self.card_numbers[np.argmax(prob)]
         probabilities = ["%0.6f" % p for p in prob[0]]
 
         return predicted_shape, probabilities
     
-    
-if __name__ == "__main__":
-    
-    image = cv2.imread(os.path.abspath("../../data/preprocessed_images/blue/b_08_preprocessed.PNG"))
-    HSVmasking = [ np.asarray([99.87, 109.19, 220.15]),   np.asarray([0.60, 9.25, 20.20])]
-    det = FeatureDetection()
-    det.get_contours(image, HSVmasking)
-
-# {'black': [[array([ 34.15037966,  14.71207953, 132.46243718]), array([3.77269726, 1.54113936, 5.04183632])]], 
-# 'blue': [[array([ 27.68814548,  18.85656918, 174.64061   ]), array([ 0.89614955,  1.56607071, 31.00258479])]], 
-# 'green': [[array([ 25.47568036,  18.19218159, 174.60378035]), array([ 0.8956469 ,  2.25711578, 22.57357425])]], 
-# 'red': [[array([ 34.07084413,  14.88664041, 145.83160265]), array([ 0.7881771 ,  1.57768108, 10.93406817])]], 
-# 'yellow': [[array([ 31.25363117,  13.42204303, 177.73161954]), array([ 2.51840713,  1.48964919, 21.57382226])]]}
