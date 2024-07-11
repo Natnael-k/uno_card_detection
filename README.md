@@ -36,41 +36,58 @@ Uno Card Detection System using Computer Vision
 4. Implementation
 
    4.1 Folder Structure
-   Data - Data augumented, preprocessesd as well as original images are staored
-   models - T the trained model are stored for inference.
-   src - main folder which all utility scripts and main file to run the detection.
+   Data - Data augmented, preprocessed, and original images are staored
+models - The trained models are stored for inference.
+   src - main folder which all utility scripts and main files to run the detection.
    test - test files
 
-   Scipts -
-   color_classification_training.py: Contains Class for color detection related functions
-   number_classification_training.py: Contians Class for Feature extraction and model training related functions
-   synthetic_data_augmentation.py: Contain Class for color, shape and background augumentation related functions
-   original_image_preprocessing.py: Contains Script for Croping original image feom its background
+   Scripts -
+
+   color detection ->
+   color_classification_closeness.py: The ColorRecognizer class is designed to recognize the color of objects in images based on their HSV values. It estimates the HSV values from a set of images and uses these values to recognize the color of objects in new images through a closeness metric.
+   color_classification_knn.py: Contains The ColorKNN class which is designed to recognize colors in images using a K-Nearest Neighbors (KNN) classifier. It includes methods to train the KNN model with provided color data and to predict the color of objects in new images based on their HSV values.
+
+   number classifications ->
+   number_classification_training.py: The FeatureDetection class is designed to classify simple objects based on a selected set of features extracted from images. It uses various image processing techniques and machine learning algorithms to achieve this. The class provides methods for feature extraction, dataset creation, model training, and object classification.
+
+   ROI detection -
+   synthetic_data_augmentation.py: Contain Class for color, shape, and background augmentation related functionsThis script performs data augmentation by blending card images onto various background images and generating annotations for the regions of interest (ROI). The goal is to create an enhanced dataset for training machine learning models. The script includes several functions and a main loop to automate this process.
+   roi_hsv_segmentation: Contains The UnoCardSegmentationDetector class which provides functionality to detect Uno cards based on HSV (Hue, Saturation, Value) color segmentation. It includes methods to segment the cards by their predefined color ranges and draw contours around the detected cards.
+   roi_regression_cnn_model: Contains The UnoCardDetector class which provides functionality to detect and localize Uno card regions of interest (ROI) using TensorFlow/Keras for machine learning and OpenCV for image processing.
+   synthetic_data_augmentation: The provided script integrates various functionalities using OpenCV and CSV handling to process and augment images, primarily for creating annotated datasets. Here’s a breakdown and review of its components
+
+
+   Main.py: The UnoDetector class is designed to perform real-time detection, recognition, and annotation of UNO cards using computer vision techniques. Here’s a comprehensive overview of its components and functionality
+
+   utils.py: The ImagePreprocessor class is designed to preprocess images from an original dataset, primarily focusing on extracting and augmenting UNO card images for further processing. Here’s a detailed review of its components and functionality:
 
    4.2 Installation
 
    clone the repo
-   pip instal requirments.tsx
-   cd /src ----> place all your original data insisde the original data sub folders according to the color and
-   python original_image_preprocessing.py --->Thi will generate augumentation data for you, chcek the other folders if image is populated
+   pip install requirements.txt
+   cd /src ----> Place all your original data inside the original data subfolders according to the color and
+   python utils.py --->Thi will generate augmentation data for you, check the other folders if the image is populated
 
-5. Results
+5 . Conclusion and Results Analysis
 
-The performance of the Uno Card Detection System will be evaluated using various metrics such as accuracy, precision, recall, and F1-score. The results will demonstrate the effectiveness of the proposed approach in accurately detecting and classifying Uno cards.
+5.1 Results of Color Classification Using KNN and Closeness Models
 
-7. Discussion
+The Uno Card Detection System achieved promising results in color classification using two distinct models: K-Nearest Neighbors (KNN) and Closeness-based classification. The KNN model demonstrated an accuracy of 87%, effectively distinguishing between Uno card colors under varying conditions. On the other hand, the Closeness model performed exceptionally well in well-lit environments, leveraging subtle color variations to accurately classify Uno card colors.
 
-The discussion will analyze the strengths and limitations of the system, potential improvements, and future research directions. It will also address any challenges encountered during the implementation and evaluation phases.
+5.2 Evaluation of ROI Training for Uno Card Detection
 
-8. Conclusion
+The training of Region of Interest (ROI) detection posed significant computational challenges, particularly when executed on a CPU. Despite efforts to train the model using a small image dataset, the achieved accuracy was not satisfactory. This limitation underscores the need for augmenting the dataset with more diverse images and exploring methods to increase its size. Future enhancements should focus on optimizing training parameters and leveraging GPU acceleration to improve computational efficiency.
 
-The Uno Card Detection System presents a robust solution for automatically detecting and classifying Uno cards from images captured using a smartphone camera. By leveraging computer vision techniques and machine learning models, the system achieves accurate detection and classification results, paving the way for applications in gaming and entertainment.
+5.3 Challenges in Number Classification
 
-9. Future Work
-   Future work may involve expanding the dataset, exploring other models for better performance, and exploring advanced computer vision techniques for more complex card games. Additionally, the system could be deployed as a mobile application for real-time Uno card detection and classification.
+Number classification emerged as the most challenging aspect of the Uno Card Detection System. This task requires robust data preprocessing due to variations in card orientation, lighting conditions, and image quality. Effective preprocessing techniques are crucial to enhance the accuracy and reliability of number recognition, demanding further research into advanced image processing methodologies.
 
-10. References
+5.4 Conclusion
 
-@DR_Sammer
+In conclusion, the Uno Card Detection System demonstrates promising capabilities in color classification, with the KNN model achieving an accuracy of 87% and the Closeness model excelling under optimal lighting conditions. However, challenges persist in ROI training due to computational constraints and in number classification, which necessitates more sophisticated data preprocessing techniques. Moving forward, expanding the dataset, augmenting data, and refining preprocessing methodologies will be pivotal in advancing the system's overall accuracy and robustness. These efforts will pave the way for broader applications of computer vision in card game analysis and beyond.
 
-This detailed report provides an overview of the Uno Card Detection System, including its objectives, methodology, implementation details, results, and future work. Let me know if you need further clarification or additional information on any aspect of the project.
+References
+https://towardsdatascience.com/region-of-interest-pooling-f7c637f409af
+https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
+https://www.murtazahassan.com/
+@DR_Sammer Lecture Notes
